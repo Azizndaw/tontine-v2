@@ -360,14 +360,15 @@ export default function App() {
     <div className="app-root">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         .app-root { display: flex; min-height: 100vh; background: #F5F3ED; font-family: 'IBM Plex Sans', sans-serif; }
         .app-sidebar { width: 230px; background: #1F2A44; display: flex; flex-direction: column; flex-shrink: 0; }
         .app-main { flex: 1; padding: 32px 40px; overflow-x: auto; padding-bottom: 80px; }
         .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:6px; cursor:pointer; color:#C9CDDA; font-size:14px; transition:background .15s; }
         .nav-item:hover { background:#2A3550; }
         .nav-item.active { background:#C08829; color:#1F2A44; font-weight:600; }
-        .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; border:none; white-space:nowrap; }
+        .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 14px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; border:none; white-space:nowrap; touch-action: manipulation; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.98); }
         .btn-gold { background:#C08829; color:#1F2A44; }
         .btn-gold:hover { background:#A8751F; }
         .btn-ghost { background:transparent; border:1px solid #DAD5C7; color:#445067; }
@@ -377,9 +378,9 @@ export default function App() {
         table { border-collapse:collapse; width:100%; white-space: nowrap; }
         th { text-align:left; font-size:12px; color:#7A8299; font-weight:500; padding:8px 12px; border-bottom:1px solid #DAD5C7; }
         td { padding:10px 12px; border-bottom:1px solid #EDEAE0; font-size:14px; color:#1F2A44; vertical-align:middle; }
-        input, select { font-family:'IBM Plex Sans', sans-serif; padding:8px 10px; border:1px solid #DAD5C7; border-radius:6px; font-size:14px; width:100%; }
+        input, select { font-family:'IBM Plex Sans', sans-serif; padding:10px 12px; border:1px solid #DAD5C7; border-radius:8px; font-size:14px; width:100%; -webkit-appearance: none; }
         input:focus, select:focus { outline:2px solid #C08829; outline-offset:1px; }
-        .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
         
         .finance-hero { background: linear-gradient(145deg, #1F2A44 0%, #111827 100%); color: white; border-radius: 16px; padding: 28px; margin-bottom: 30px; box-shadow: 0 12px 35px rgba(31, 42, 68, 0.2); }
         .finance-main { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 24px; margin-bottom: 24px; }
@@ -393,24 +394,87 @@ export default function App() {
         .finance-card-title { font-size: 12px; color: #9CA3AF; margin-bottom: 8px; font-weight: 500; }
         .finance-card-value { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; color: #F3F4F6; }
         .finance-card-value.highlight { color: #E5A93D; }
-        
+
+        .mobile-only { display: none !important; }
+        .desktop-only { display: block; }
+        table.desktop-only { display: table; }
+
         @media (max-width: 768px) {
+          .mobile-only { display: flex !important; }
+          .desktop-only { display: none !important; }
+          
           .app-root { flex-direction: column; }
-          .app-sidebar { width: 100%; padding: 8px; flex-direction: row; justify-content: space-around; position: fixed; bottom: 0; left: 0; z-index: 100; height: auto; padding-bottom: calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid #2A3550; box-shadow: 0 -4px 12px rgba(0,0,0,0.1); }
+          .app-sidebar {
+            width: 100%;
+            padding: 6px 8px;
+            flex-direction: row;
+            justify-content: space-around;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            height: auto;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            background: #111827;
+            border-top: 1px solid #2A3550;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.25);
+          }
           .logo { display: none; }
           .app-sidebar > nav { flex-direction: row !important; width: 100%; justify-content: space-around; padding: 0 !important; }
-          .app-sidebar .nav-item { flex-direction: column; gap: 4px; padding: 6px 4px; font-size: 10px; text-align: center; border-radius: 8px; flex: 1; }
+          .app-sidebar .nav-item { flex-direction: column; gap: 3px; padding: 8px 4px; font-size: 10px; text-align: center; border-radius: 8px; flex: 1; justify-content: center; }
+          .app-sidebar .nav-item.active { background: #C08829; color: #1F2A44; }
           .sidebar-footer { display: none !important; }
-          .app-main { padding: 16px 12px 100px 12px; }
-          .header-actions { flex-direction: column; width: 100%; align-items: stretch; margin-top: 10px; }
-          .header-actions button { width: 100%; justify-content: center; }
+          .app-main { padding: 16px 14px 110px 14px; }
+          
+          .header-actions { flex-direction: row; width: 100%; gap: 8px; margin-top: 10px; }
+          .header-actions button { flex: 1; justify-content: center; padding: 12px; }
           .search-bar { width: 100% !important; max-width: none !important; }
-          .stats-container { gap: 12px !important; }
+          .stats-container { gap: 10px !important; grid-template-columns: repeat(2, 1fr) !important; display: grid !important; }
           .stat-divider { display: none !important; }
-          .stat-box { background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #edeae0; flex: 1; min-width: 45%; }
-          .finance-hero { padding: 20px; }
-          .finance-main { flex-direction: column; align-items: flex-start; gap: 14px; }
-          .finance-grid { grid-template-columns: 1fr; gap: 12px; }
+          .stat-box { background: #fff; padding: 14px; border-radius: 10px; border: 1px solid #edeae0; text-align: center; }
+          .finance-hero { padding: 18px; border-radius: 14px; }
+          .finance-main { flex-direction: row; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 16px; margin-bottom: 16px; }
+          .finance-main-value { font-size: 32px; }
+          .finance-main-pct { font-size: 28px; }
+          .finance-grid { grid-template-columns: 1fr; gap: 10px; }
+
+          /* Mobile Cards */
+          .mobile-card-list { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+          .mobile-card {
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #EDEAE0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+          .mobile-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+          .mobile-card-title { font-weight: 600; font-size: 16px; color: #1F2A44; }
+          .mobile-card-subtitle { font-size: 12px; color: #7A8299; margin-top: 2px; }
+          .mobile-card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; border-top: 1px solid #F3F1EB; padding-top: 10px; }
+          .mobile-card-actions button { flex: 1; min-width: 44px; justify-content: center; padding: 8px 10px; font-size: 12px; }
+
+          /* Bottom Sheet Modals on Mobile */
+          .modal-overlay-custom {
+            position: fixed; inset: 0; background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(4px); display: flex; align-items: flex-end;
+            justify-content: center; z-index: 150; padding: 0;
+          }
+          .modal-box-custom {
+            background: #fff; border-radius: 20px 20px 0 0; width: 100%;
+            max-width: 100%; max-height: 88vh; overflow-y: auto;
+            padding: 16px 16px calc(24px + env(safe-area-inset-bottom)) 16px;
+            animation: mobileSlideUp 0.22s ease-out;
+          }
+          @keyframes mobileSlideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+          }
+          .modal-drag-indicator {
+            width: 38px; height: 5px; background: #DAD5C7; border-radius: 3px; margin: 0 auto 12px auto;
+          }
         }
       `}</style>
 
@@ -610,7 +674,7 @@ function Apercu({ totals, participants }) {
       {enRetardList.length > 0 && (
         <>
           <h2 style={styles.h2}>Participants en retard</h2>
-          <table>
+          <table className="desktop-only">
             <thead>
               <tr>
                 <th>Nom</th>
@@ -636,6 +700,23 @@ function Apercu({ totals, participants }) {
               ))}
             </tbody>
           </table>
+
+          <div className="mobile-only mobile-card-list">
+            {enRetardList.map(({ p, s }) => (
+              <div key={p.id} className="mobile-card">
+                <div className="mobile-card-header">
+                  <div>
+                    <div className="mobile-card-title">{p.nom}</div>
+                    <div className="mobile-card-subtitle">Lot {p.lotId} • {s.joursPayes}/{s.dus} jours payés</div>
+                  </div>
+                  <span className="badge" style={{ background: "#FDE8E8", color: "#9C4221" }}>{s.retard}j retard</span>
+                </div>
+                <button className="btn btn-gold" style={{ width: "100%", justifyContent: "center" }} onClick={() => relancer(p, s)}>
+                  <MessageCircle size={15} /> {copied === p.id ? "Copié !" : "Relancer sur WhatsApp"}
+                </button>
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>
@@ -665,7 +746,7 @@ function CollecteDuJour({ participants, onToggle }) {
       {actifs.length === 0 && <p style={{ color: "#8993AC", fontSize: 14 }}>Aucun cycle actif en cours.</p>}
 
       <div className="table-container">
-        <table>
+        <table className="desktop-only">
           <thead>
             <tr>
               <th>Nom</th>
@@ -696,6 +777,29 @@ function CollecteDuJour({ participants, onToggle }) {
             ))}
           </tbody>
         </table>
+
+        <div className="mobile-only mobile-card-list">
+          {actifs.map(({ p, s }) => (
+            <div key={p.id} className="mobile-card">
+              <div className="mobile-card-header">
+                <div>
+                  <div className="mobile-card-title">{p.nom}</div>
+                  <div className="mobile-card-subtitle">Lot {p.lotId} ({s.lot.montant}F/jour)</div>
+                </div>
+                {s.retard > 0 ? (
+                  <span className="badge" style={{ background: "#FDE8E8", color: "#9C4221" }}>{s.retard}j retard</span>
+                ) : s.joursAvance > 0 ? (
+                  <span className="badge" style={{ background: "#FEF3C7", color: "#C08829" }}>+{s.joursAvance}j avance</span>
+                ) : (
+                  <span className="badge" style={{ background: "#E8F5E9", color: "#3F6B4E" }}>À jour</span>
+                )}
+              </div>
+              <button className={`btn ${s.payeAujourdhui ? "btn-green" : s.joursAvance > 0 ? "btn-ghost" : "btn-gold"}`} style={{ width: "100%", justifyContent: "center" }} onClick={() => onToggle(p, s)}>
+                {s.payeAujourdhui ? <><Check size={16} /> Payé aujourd'hui</> : s.joursAvance > 0 ? <><Plus size={16} /> Versement supplémentaire</> : "Marquer payé (" + s.lot.montant + "F)"}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -710,7 +814,7 @@ function Livraisons({ participants, onToggle }) {
     <div>
       <h1 style={styles.h1}>Livraisons de packs</h1>
       <h2 style={styles.h2}>En attente ({enAttente.length})</h2>
-      <table style={{ marginBottom: 32 }}>
+      <table className="desktop-only" style={{ marginBottom: 32 }}>
         <thead><tr><th>Nom</th><th>Pack visé</th><th>Cycle terminé le</th><th></th></tr></thead>
         <tbody>
           {enAttente.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "#8993AC", padding: 16 }}>Rien en attente.</td></tr>}
@@ -725,8 +829,26 @@ function Livraisons({ participants, onToggle }) {
         </tbody>
       </table>
 
+      <div className="mobile-only mobile-card-list" style={{ marginBottom: 24 }}>
+        {enAttente.length === 0 && <p style={{ color: "#8993AC", fontSize: 13 }}>Rien en attente.</p>}
+        {enAttente.map(({ p }) => (
+          <div key={p.id} className="mobile-card">
+            <div className="mobile-card-header">
+              <div>
+                <div className="mobile-card-title">{p.nom}</div>
+                <div className="mobile-card-subtitle">{p.catalogue} — Pack {p.packNumero}</div>
+              </div>
+              <span className="badge" style={{ background: "#FEF3C7", color: "#C08829" }}>À livrer</span>
+            </div>
+            <button className="btn btn-gold" style={{ width: "100%", justifyContent: "center" }} onClick={() => onToggle(p)}>
+              <Truck size={16} /> Marquer livré
+            </button>
+          </div>
+        ))}
+      </div>
+
       <h2 style={styles.h2}>Livrés ({livres.length})</h2>
-      <table>
+      <table className="desktop-only">
         <thead><tr><th>Nom</th><th>Pack</th><th>Livré le</th><th></th></tr></thead>
         <tbody>
           {livres.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "#8993AC", padding: 16 }}>Aucune livraison pour l'instant.</td></tr>}
@@ -740,6 +862,24 @@ function Livraisons({ participants, onToggle }) {
           ))}
         </tbody>
       </table>
+
+      <div className="mobile-only mobile-card-list">
+        {livres.length === 0 && <p style={{ color: "#8993AC", fontSize: 13 }}>Aucune livraison pour l'instant.</p>}
+        {livres.map(({ p }) => (
+          <div key={p.id} className="mobile-card">
+            <div className="mobile-card-header">
+              <div>
+                <div className="mobile-card-title">{p.nom}</div>
+                <div className="mobile-card-subtitle">{p.catalogue} — Pack {p.packNumero} (Livré le {p.dateLivraison})</div>
+              </div>
+              <span className="badge" style={{ background: "#E8F5E9", color: "#3F6B4E" }}>Livré</span>
+            </div>
+            <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center" }} onClick={() => onToggle(p)}>
+              Annuler livraison
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -767,7 +907,7 @@ function Participants({ participants, search, setSearch, filterLot, setFilterLot
       </div>
 
       <div style={{ overflowX: "auto" }}>
-        <table>
+        <table className="desktop-only">
           <thead>
             <tr>
               <th>Nom</th>
@@ -831,6 +971,61 @@ function Participants({ participants, search, setSearch, filterLot, setFilterLot
             })}
           </tbody>
         </table>
+
+        <div className="mobile-only mobile-card-list">
+          {participants.length === 0 && (
+            <p style={{ textAlign: "center", color: "#8993AC", padding: 24 }}>Aucun participant pour l'instant.</p>
+          )}
+          {participants.map((p) => {
+            const s = stats(p);
+            const pct = Math.min(100, (s.joursPayes / s.lot.duree) * 100);
+            const statut = s.termine ? "Terminé" : s.retard > 0 ? "En retard" : "Actif";
+            const statutColor = s.termine ? "#3F6B4E" : s.retard > 0 ? "#9C4221" : "#445067";
+            return (
+              <div key={p.id} className="mobile-card">
+                <div className="mobile-card-header">
+                  <div>
+                    <div className="mobile-card-title">
+                      {p.nom}
+                      {(p.historique || []).length > 0 && (
+                        <span className="badge" style={{ background: "#EFEDE6", color: "#7A8299", marginLeft: 6 }} onClick={() => onHistorique(p)}>
+                          {p.historique.length} cycle(s)
+                        </span>
+                      )}
+                    </div>
+                    <div className="mobile-card-subtitle">{p.telephone ? p.telephone : "Sans téléphone"} • Lot {p.lotId}</div>
+                  </div>
+                  <span className="badge" style={{ background: s.termine ? "#E8F5E9" : s.retard > 0 ? "#FDE8E8" : "#EFEDE6", color: statutColor }}>
+                    {statut}
+                  </span>
+                </div>
+
+                <div style={{ background: "#F9F8F5", padding: 12, borderRadius: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#445067", marginBottom: 4 }}>
+                    <span>Progression ({s.joursPayes}/{s.lot.duree}j)</span>
+                    <strong>{fmt(s.paye)}</strong>
+                  </div>
+                  <div style={{ background: "#EDEAE0", height: 8, borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ width: `${pct}%`, background: s.retard > 0 ? "#9C4221" : "#C08829", height: "100%" }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: "#7A8299", marginTop: 6 }}>Pack visé: {p.catalogue} — Pack {p.packNumero}</div>
+                </div>
+
+                <div className="mobile-card-actions">
+                  <button className="btn btn-gold" onClick={() => onVersements(p)}><History size={14} /> Versements</button>
+                  {s.termine && !p.packLivre && (
+                    <button className="btn btn-green" onClick={() => onLivraison(p)}><Truck size={14} /> Livrer</button>
+                  )}
+                  {s.termine && (
+                    <button className="btn btn-ghost" onClick={() => onCycle(p)}><RotateCcw size={14} /> Nouveau cycle</button>
+                  )}
+                  <button className="btn btn-ghost" onClick={() => onEdit(p)}><Pencil size={14} /></button>
+                  <button className="btn btn-ghost" style={{ color: "#9C4221" }} onClick={() => onDelete(p)}><Trash2 size={14} /></button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
