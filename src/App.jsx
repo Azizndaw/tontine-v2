@@ -29,7 +29,7 @@ const LOTS = [
   { id: 6, montant: 1000, duree: 20 },
 ];
 
-const PACKS = {
+const DEFAULT_PACKS = {
   A: [
     { numero: 1, contenu: ["3 patchs draps de lit (6 pcs chacun)", "2 paires d'oreillers orthopédiques"] },
     { numero: 2, contenu: ["1 table de coin", "1 pot de fleur", "1 pot de fleur en verre", "1 patch draps de lit", "1 paire d'oreiller orthopédique"] },
@@ -50,6 +50,7 @@ const PACKS = {
 
 const PARTICIPANTS_KEY = "tontine-participants";
 const COSTS_KEY = "tontine-pack-costs";
+const PACKS_KEY = "tontine-packs-v2";
 const API_URL = "/api/data";
 const MODES = ["Espèces", "Mobile Money", "Autre"];
 
@@ -109,6 +110,9 @@ const emptyCycle = () => ({
 export default function App() {
   const [participants, setParticipants] = useState([]);
   const [costs, setCosts] = useState({});
+  const [packs, setPacks] = useState(DEFAULT_PACKS);
+  const [editingPack, setEditingPack] = useState(null); // { cat: "A", pack: null } or { cat: "A", pack: {...} }
+  const [confirmDeletePack, setConfirmDeletePack] = useState(null); // { cat: "A", numero: 1 }
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState("apercu");
   const [search, setSearch] = useState("");
@@ -127,20 +131,24 @@ export default function App() {
     // 1. Charger immédiatement les données locales pour un affichage rapide et fiable
     const localP = localStorage.getItem(PARTICIPANTS_KEY);
     const localC = localStorage.getItem(COSTS_KEY);
+    const localPk = localStorage.getItem(PACKS_KEY);
     let initialP = [];
     let initialC = {};
+    let initialPk = DEFAULT_PACKS;
 
     try {
       if (localP) initialP = JSON.parse(localP);
       if (localC) initialC = JSON.parse(localC);
+      if (localPk) initialPk = JSON.parse(localPk);
     } catch (e) {
       console.error("Erreur de lecture du localStorage:", e);
     }
 
     if (Array.isArray(initialP) && initialP.length > 0) {
       setParticipants(initialP);
-      setCosts(initialC);
     }
+    setCosts(initialC);
+    setPacks(initialPk);
     setLoaded(true);
 
     // 2. Tenter de synchroniser avec l'API Cloud en arrière-plan
@@ -148,15 +156,18 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         // Si l'API cloud est configurée et renvoie des données valides
-        if (data && data.configured !== false && Array.isArray(data.participants)) {
-          if (data.participants.length > 0) {
+        if (data && data.configured !== false) {
+          if (Array.isArray(data.participants) && data.participants.length > 0) {
             setParticipants(data.participants);
             setCosts(data.costs || {});
+            if (data.packs && Object.keys(data.packs).length > 0) {
+              setPacks(data.packs);
+              localStorage.setItem(PACKS_KEY, JSON.stringify(data.packs));
+            }
             localStorage.setItem(PARTICIPANTS_KEY, JSON.stringify(data.participants));
             localStorage.setItem(COSTS_KEY, JSON.stringify(data.costs || {}));
           } else if (initialP.length > 0) {
-            // Si la base cloud est vide mais qu'on a des données locales, on envoie les données locales vers le cloud
-            syncAPI(initialP, initialC);
+            syncAPI(initialP, initialC, initialPk);
           }
         }
       })
@@ -165,28 +176,64 @@ export default function App() {
       });
   }, []);
 
-  function syncAPI(p, c) {
+  function syncAPI(p, c, pk) {
+    const currentP = p !== undefined ? p : participants;
+    const currentC = c !== undefined ? c : costs;
+    const currentPk = pk !== undefined ? pk : packs;
+
     // Enregistrement synchrone dans localStorage
-    localStorage.setItem(PARTICIPANTS_KEY, JSON.stringify(p));
-    localStorage.setItem(COSTS_KEY, JSON.stringify(c));
+    localStorage.setItem(PARTICIPANTS_KEY, JSON.stringify(currentP));
+    localStorage.setItem(COSTS_KEY, JSON.stringify(currentC));
+    localStorage.setItem(PACKS_KEY, JSON.stringify(currentPk));
 
     // Envoi en arrière-plan vers l'API
     fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ participants: p, costs: c })
+      body: JSON.stringify({ participants: currentP, costs: currentC, packs: currentPk })
     }).catch(e => console.error("Erreur de synchronisation API", e));
   }
 
-
   function persist(next) {
     setParticipants(next);
-    syncAPI(next, costs);
+    syncAPI(next, costs, packs);
   }
 
   function persistCosts(next) {
     setCosts(next);
-    syncAPI(participants, next);
+    syncAPI(participants, next, packs);
+  }
+
+  function persistPacks(nextPacks) {
+    setPacks(nextPacks);
+    syncAPI(participants, costs, nextPacks);
+  }
+
+  function savePack(cat, packData) {
+    const nextPacks = { ...packs };
+    if (!nextPacks[cat]) nextPacks[cat] = [];
+    const idx = nextPacks[cat].findIndex(p => p.numero === packData.numero);
+    if (idx >= 0) {
+      nextPacks[cat][idx] = packData;
+    } else {
+      nextPacks[cat].push(packData);
+      nextPacks[cat].sort((a, b) => a.numero - b.numero);
+    }
+    persistPacks(nextPacks);
+    setEditingPack(null);
+  }
+
+  function deletePack(cat, packNumero) {
+    const inUse = participants.some(p => p.catalogue === cat && p.packNumero === packNumero);
+    if (inUse) {
+      alert(`Impossible de supprimer le Pack ${packNumero} du Catalogue ${cat} car des membres y sont actuellement inscrits.`);
+      setConfirmDeletePack(null);
+      return;
+    }
+    const nextPacks = { ...packs };
+    nextPacks[cat] = (nextPacks[cat] || []).filter(p => p.numero !== packNumero);
+    persistPacks(nextPacks);
+    setConfirmDeletePack(null);
   }
 
   function saveParticipant(data) {
@@ -558,14 +605,42 @@ export default function App() {
 
         {tab === "livraisons" && <Livraisons participants={participants} onToggle={toggleLivraison} />}
 
-        {tab === "catalogue" && <Catalogue participants={participants} costs={costs} onUpdateCost={updateCost} />}
+        {tab === "catalogue" && (
+          <Catalogue
+            participants={participants}
+            costs={costs}
+            packs={packs}
+            onUpdateCost={updateCost}
+            onAddPack={(cat) => setEditingPack({ cat, pack: null })}
+            onEditPack={(cat, pack) => setEditingPack({ cat, pack })}
+            onDeletePack={(cat, numero) => setConfirmDeletePack({ cat, numero })}
+          />
+        )}
       </main>
 
       {formOpen && (
         <ParticipantForm
           initial={editing}
+          packs={packs}
           onCancel={() => { setFormOpen(false); setEditing(null); }}
           onSave={saveParticipant}
+        />
+      )}
+
+      {editingPack && (
+        <PackModal
+          initialCat={editingPack.cat}
+          initialPack={editingPack.pack}
+          onCancel={() => setEditingPack(null)}
+          onSave={savePack}
+        />
+      )}
+
+      {confirmDeletePack && (
+        <ConfirmModal
+          message={`Êtes-vous sûr de vouloir supprimer définitivement le Pack ${confirmDeletePack.numero} du Catalogue ${confirmDeletePack.cat} ?`}
+          onCancel={() => setConfirmDeletePack(null)}
+          onConfirm={() => deletePack(confirmDeletePack.cat, confirmDeletePack.numero)}
         />
       )}
 
@@ -1050,27 +1125,54 @@ function Participants({ participants, search, setSearch, filterLot, setFilterLot
   );
 }
 
-function Catalogue({ participants, costs, onUpdateCost }) {
+function Catalogue({ participants, costs, packs, onUpdateCost, onEditPack, onAddPack, onDeletePack }) {
   const countFor = (cat, num) => participants.filter((p) => p.catalogue === cat && p.packNumero === num).length;
+  const categories = Object.keys(packs || {});
+
   return (
     <div>
-      <h1 style={styles.h1}>Catalogue de packs</h1>
-      <p style={{ fontSize: 13, color: "#7A8299", marginTop: -12, marginBottom: 20 }}>Renseignez le coût d'achat de chaque pack pour suivre la marge dans l'Aperçu.</p>
-      {["A", "B"].map((cat) => (
-        <div key={cat} style={{ marginBottom: 32 }}>
-          <h2 style={styles.h2}>Catalogue {cat}</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
-            {PACKS[cat].map((pack) => {
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <h1 style={styles.h1}>Catalogue de packs</h1>
+          <p style={{ fontSize: 13, color: "#7A8299", marginTop: -12, marginBottom: 0 }}>Gérez vos packs, ajoutez/modifiez les options et suivez les coûts d'achat.</p>
+        </div>
+        <button className="btn btn-gold" onClick={() => onAddPack("A")}>
+          <Plus size={15} /> Nouveau Pack
+        </button>
+      </div>
+
+      {categories.map((cat) => (
+        <div key={cat} style={{ marginBottom: 36 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <h2 style={styles.h2}>Catalogue {cat}</h2>
+            <button className="btn btn-ghost btn-sm" onClick={() => onAddPack(cat)}>
+              <Plus size={14} /> Ajouter un pack à {cat}
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+            {(packs[cat] || []).map((pack) => {
               const n = countFor(cat, pack.numero);
               return (
                 <div key={pack.numero} style={styles.packCard}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 600, color: "#1F2A44" }}>Pack {pack.numero}</div>
-                    {n > 0 && <div style={{ fontSize: 12, color: "#C08829", fontWeight: 600 }}>{n} visé(s)</div>}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, color: "#1F2A44" }}>Pack {pack.numero}</div>
+                      {n > 0 && <div style={{ fontSize: 11, color: "#C08829", fontWeight: 600 }}>{n} membre(s) visent ce pack</div>}
+                    </div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="btn btn-ghost" style={{ padding: 6 }} title="Modifier le pack et ses options" onClick={() => onEditPack(cat, pack)}>
+                        <Pencil size={14} />
+                      </button>
+                      <button className="btn btn-ghost" style={{ padding: 6, color: "#9C4221" }} title="Supprimer le pack" onClick={() => onDeletePack(cat, pack.numero)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "#445067", lineHeight: 1.6, marginBottom: 10 }}>
-                    {pack.contenu.map((item, i) => <li key={i}>{item}</li>)}
+
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "#445067", lineHeight: 1.6, marginBottom: 12 }}>
+                    {(pack.contenu || []).map((item, i) => <li key={i}>{item}</li>)}
                   </ul>
+
                   <label style={{ fontSize: 11, color: "#7A8299", display: "block", marginBottom: 3 }}>Coût d'achat (F)</label>
                   <input type="number" placeholder="0" value={costs?.[cat]?.[pack.numero] || ""} onChange={(e) => onUpdateCost(cat, pack.numero, e.target.value)} />
                 </div>
@@ -1083,7 +1185,84 @@ function Catalogue({ participants, costs, onUpdateCost }) {
   );
 }
 
-function ParticipantForm({ initial, onCancel, onSave }) {
+function PackModal({ initialCat, initialPack, onCancel, onSave }) {
+  const [cat, setCat] = useState(initialCat || "A");
+  const [numero, setNumero] = useState(initialPack?.numero || 1);
+  const [contenu, setContenu] = useState(initialPack?.contenu || [""]);
+
+  const addOption = () => setContenu([...contenu, ""]);
+  const updateOption = (index, value) => {
+    const updated = [...contenu];
+    updated[index] = value;
+    setContenu(updated);
+  };
+  const removeOption = (index) => {
+    setContenu(contenu.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const cleanContenu = contenu.map(c => c.trim()).filter(Boolean);
+    if (cleanContenu.length === 0) return alert("Veuillez ajouter au moins une option ou un article au pack.");
+    onSave(cat, { numero: Number(numero), contenu: cleanContenu });
+  };
+
+  return (
+    <div style={styles.overlay}>
+      <form style={{ ...styles.modal, maxWidth: 520 }} onSubmit={handleSubmit}>
+        <div style={styles.modalHeader}>
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600 }}>
+            {initialPack ? `Modifier Pack ${initialPack.numero} (Cat. ${cat})` : "Ajouter un nouveau pack"}
+          </span>
+          <X size={18} style={{ cursor: "pointer" }} onClick={onCancel} />
+        </div>
+        <div style={styles.modalBody}>
+          <Field label="Catalogue">
+            <select value={cat} onChange={(e) => setCat(e.target.value)} disabled={!!initialPack}>
+              <option value="A">Catalogue A</option>
+              <option value="B">Catalogue B</option>
+            </select>
+          </Field>
+
+          <Field label="Numéro du Pack">
+            <input type="number" min="1" value={numero} onChange={(e) => setNumero(e.target.value)} required />
+          </Field>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "#1F2A44", display: "block", marginBottom: 8 }}>
+              Contenu / Articles du pack ({contenu.length})
+            </label>
+            {contenu.map((item, idx) => (
+              <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                <input
+                  value={item}
+                  onChange={(e) => updateOption(idx, e.target.value)}
+                  placeholder={`Article ${idx + 1} (ex: 1 moquette fourrure)`}
+                  required
+                />
+                {contenu.length > 1 && (
+                  <button type="button" className="btn btn-ghost" style={{ padding: 8, color: "#9C4221" }} onClick={() => removeOption(idx)}>
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 4 }} onClick={addOption}>
+              <Plus size={15} /> Ajouter un article / une option
+            </button>
+          </div>
+        </div>
+
+        <div style={styles.modalFooter}>
+          <button type="button" className="btn btn-ghost" onClick={onCancel}>Annuler</button>
+          <button type="submit" className="btn btn-gold"><Check size={16} /> Enregistrer le Pack</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function ParticipantForm({ initial, packs, onCancel, onSave }) {
   const [nom, setNom] = useState(initial?.nom || "");
   const [telephone, setTelephone] = useState(initial?.telephone || "");
   const [dateInscription, setDateInscription] = useState(initial?.dateInscription || today());
@@ -1091,7 +1270,7 @@ function ParticipantForm({ initial, onCancel, onSave }) {
   const [catalogue, setCatalogue] = useState(initial?.catalogue || "A");
   const [packNumero, setPackNumero] = useState(initial?.packNumero || 1);
   const [premierVersement, setPremierVersement] = useState("");
-  const packs = PACKS[catalogue];
+  const availablePacks = packs?.[catalogue] || [];
 
   function submit(e) {
     e.preventDefault();
