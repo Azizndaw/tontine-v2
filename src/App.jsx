@@ -1307,7 +1307,7 @@ function ParticipantForm({ initial, packs, onCancel, onSave }) {
           </Field>
           <Field label="Pack visé">
             <select value={packNumero} onChange={(e) => setPackNumero(e.target.value)}>
-              {packs.map((p) => <option key={p.numero} value={p.numero}>Pack {p.numero}</option>)}
+              {(availablePacks || []).map((p) => <option key={p.numero} value={p.numero}>Pack {p.numero}</option>)}
             </select>
           </Field>
         </div>
