@@ -50,6 +50,7 @@ const PACKS = {
 
 const PARTICIPANTS_KEY = "tontine-participants";
 const COSTS_KEY = "tontine-pack-costs";
+const API_URL = "/api/data";
 const MODES = ["Espèces", "Mobile Money", "Autre"];
 
 const fmt = (n) => new Intl.NumberFormat("fr-FR").format(Math.round(n || 0)) + " F";
