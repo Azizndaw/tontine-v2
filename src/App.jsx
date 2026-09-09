@@ -122,36 +122,54 @@ export default function App() {
   const [pendingImport, setPendingImport] = useState(null);
   const fileInputRef = useRef(null);
 
-  const API_URL = "/api/data";
-
   useEffect(() => {
+    // 1. Charger immédiatement les données locales pour un affichage rapide et fiable
+    const localP = localStorage.getItem(PARTICIPANTS_KEY);
+    const localC = localStorage.getItem(COSTS_KEY);
+    let initialP = [];
+    let initialC = {};
+
+    try {
+      if (localP) initialP = JSON.parse(localP);
+      if (localC) initialC = JSON.parse(localC);
+    } catch (e) {
+      console.error("Erreur de lecture du localStorage:", e);
+    }
+
+    if (Array.isArray(initialP) && initialP.length > 0) {
+      setParticipants(initialP);
+      setCosts(initialC);
+    }
+    setLoaded(true);
+
+    // 2. Tenter de synchroniser avec l'API Cloud en arrière-plan
     fetch(API_URL)
       .then(res => res.json())
       .then(data => {
-        if (data && (data.participants || data.costs)) {
-          setParticipants(data.participants || []);
-          setCosts(data.costs || {});
-        } else {
-          const localP = localStorage.getItem(PARTICIPANTS_KEY);
-          const localC = localStorage.getItem(COSTS_KEY);
-          if (localP) setParticipants(JSON.parse(localP));
-          if (localC) setCosts(JSON.parse(localC));
+        // Si l'API cloud est configurée et renvoie des données valides
+        if (data && data.configured !== false && Array.isArray(data.participants)) {
+          if (data.participants.length > 0) {
+            setParticipants(data.participants);
+            setCosts(data.costs || {});
+            localStorage.setItem(PARTICIPANTS_KEY, JSON.stringify(data.participants));
+            localStorage.setItem(COSTS_KEY, JSON.stringify(data.costs || {}));
+          } else if (initialP.length > 0) {
+            // Si la base cloud est vide mais qu'on a des données locales, on envoie les données locales vers le cloud
+            syncAPI(initialP, initialC);
+          }
         }
-        setLoaded(true);
       })
       .catch(err => {
-        console.error("Problème API de chargement, bascule sur localStorage: ", err);
-        const localP = localStorage.getItem(PARTICIPANTS_KEY);
-        const localC = localStorage.getItem(COSTS_KEY);
-        if (localP) setParticipants(JSON.parse(localP));
-        if (localC) setCosts(JSON.parse(localC));
-        setLoaded(true);
+        console.warn("API non joignable, conservation des données locales:", err);
       });
   }, []);
 
   function syncAPI(p, c) {
+    // Enregistrement synchrone dans localStorage
     localStorage.setItem(PARTICIPANTS_KEY, JSON.stringify(p));
     localStorage.setItem(COSTS_KEY, JSON.stringify(c));
+
+    // Envoi en arrière-plan vers l'API
     fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

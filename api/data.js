@@ -20,12 +20,13 @@ export default async function handler(req, res) {
   if (!supabaseUrl || !supabaseKey) {
     if (req.method === 'GET') {
       return res.status(200).json({
-        participants: [],
-        costs: {},
-        _notice: "Avertissement: Variables SUPABASE_URL et SUPABASE_KEY non définies sur Vercel."
+        configured: false,
+        participants: null,
+        costs: null,
+        _notice: "Variables SUPABASE_URL et SUPABASE_KEY non définies sur Vercel."
       });
     }
-    return res.status(200).json({ success: true, warning: "Pas de base de données configurée" });
+    return res.status(200).json({ configured: false, success: false });
   }
 
   const headers = {
