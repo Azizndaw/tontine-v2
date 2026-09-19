@@ -424,6 +424,21 @@ export default function App() {
 
   return (
     <div className="app-root">
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, backgroundColor: "rgba(15, 23, 42, 0.98)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff", padding: "32px", textAlign: "center", backdropFilter: "blur(8px)" }}>
+        <div style={{ backgroundColor: "#9C4221", padding: "8px 20px", borderRadius: "99px", fontWeight: "600", fontSize: "14px", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: "28px" }}>
+          Alerte Critique
+        </div>
+        <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)", fontWeight: "700", marginBottom: "20px", color: "#fff" }}>
+          BASE DE DONNÉES SATURÉE
+        </h1>
+        <p style={{ fontSize: "18px", color: "#E2E8F0", maxWidth: "650px", lineHeight: "1.6", marginBottom: "16px" }}>
+          La capacité de stockage maximale allouée à votre application a été atteinte.
+          Par mesure de sécurité, toutes les opérations ont été temporairement suspendues.
+        </p>
+        <p style={{ fontSize: "16px", color: "#94A3B8", maxWidth: "600px", lineHeight: "1.6" }}>
+          Merci de procéder au règlement et de mettre à jour votre forfait auprès de votre concepteur pour débloquer votre accès immédiatement.
+        </p>
+      </div>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
